@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Trivial Challenge - Modo Desafío</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDKs (se inicializan en script.js) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div id="setup-screen">
+        <h1>¡Bienvenido al Trivial!</h1>
+        <div id="auth-area">
+            <p id="auth-status">No autenticado</p>
+            <button id="google-signin" class="btn-main">Iniciar sesión con Google</button>
+            <button id="signout-btn" class="btn-main hidden">Cerrar sesión</button>
+        </div>
+        <input type="text" id="username-input" placeholder="Introduce tu seudónimo...">
+        <div style="margin-top:10px;">
+            <button onclick="empezarJuego()">EMPEZAR DESAFÍO</button>
+            <button onclick="mostrarHistorial()" id="view-history" class="btn-main">Ver historial</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="hidden">
+        <div class="header-info">
+            <h2 id="user-display"></h2>
+            <p>Pregunta: <span id="current-count">0</span> / 12</p>
+            <p>Aciertos: <span id="score-display">0</span></p>
+        </div>
+
+        <div class="roulette-wrapper">
+            <canvas id="canvas" width="400" height="400"></canvas>
+        </div>
+        
+        <button id="spin-btn">GIRAR RULETA</button>
+
+        <div id="quiz-area" class="hidden">
+            <div class="quiz-card">
+                <h2 id="categoria-display"></h2>
+                <p id="pregunta-text"></p>
+                <div id="opciones-container"></div>
+            </div>
+        </div>
+
+        <div id="results-screen" class="hidden">
+            <div class="quiz-card">
+                <h2>Resultados finales</h2>
+                <p id="final-summary"></p>
+                <div id="per-topic-stats"></div>
+                <button onclick="reiniciarJuego()" class="btn-main">Jugar de nuevo</button>
+            </div>
+        </div>
+        
+        <div id="history-screen" class="hidden">
+            <div class="quiz-card">
+                <h2>Historial de partidas</h2>
+                <div id="history-list">Cargando...</div>
+                <button onclick="cerrarHistorial()" class="btn-main">Cerrar historial</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
