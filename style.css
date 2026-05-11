@@ -50,6 +50,10 @@ canvas { border-radius: 50%; box-shadow: 0 0 50px rgba(0, 210, 255, 0.3); }
 
 .option-btn:hover { background: rgba(0, 210, 255, 0.2); }
 
+.feedback { margin-top: 10px; font-weight: bold; min-height: 22px; }
+.feedback.success { color: #2ecc71; }
+.feedback.error { color: #ff5c66; }
+
 #results-screen .quiz-card { max-width: 600px; margin: 20px auto; text-align: left; }
 #final-summary { font-size: 1.1rem; margin-bottom: 10px; }
 #per-topic-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -73,3 +77,10 @@ canvas { border-radius: 50%; box-shadow: 0 0 50px rgba(0, 210, 255, 0.3); }
 .history-topic .pct { font-weight:bold; color:#8ff; }
 .small-bar { height:8px; background: rgba(255,255,255,0.06); border-radius:6px; overflow:hidden; width:70%; }
 .small-bar > div { height:100%; background: linear-gradient(90deg,#f1c40f,#e74c3c); }
+
+/* Ranking */
+#ranking-list { margin-top: 10px; display: grid; gap: 8px; }
+.ranking-item { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); display:flex; align-items:center; gap:12px; }
+.rank-pos { width:36px; font-weight:800; color:#ffd700; }
+.rank-name { flex:1; color:#dfe; }
+.rank-score { font-weight:800; color:#8ff; }

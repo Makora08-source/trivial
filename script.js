@@ -509,8 +509,10 @@ const stats = { // intentos y aciertos por tema
     "Deportes": { attempts: 0, correct: 0 }
 };
 
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+// Inicializamos canvas/ctx tras cargarse el DOM para evitar null refs
+let canvas = null;
+let ctx = null;
+let spinBtn = null;
 const categories = Object.keys(bancoPreguntas);
 const colors = ["#3498db", "#9b59b6", "#e67e22", "#f1c40f", "#2ecc71", "#e74c3c"];
 let startAngle = 0;
@@ -523,184 +525,26 @@ const globalUsed = new Set();
 function generarPreguntasRealesPorCategoria(n = 20) {
     const exists = (cat, text) => bancoPreguntas[cat].some(p => p.q === text);
 
-    // Datos de apoyo por categoría
-    const geoData = {
-        capitals: [
-            ["Japón","Tokio"],["Canadá","Ottawa"],["Egipto","El Cairo"],["Australia","Canberra"],["Brasil","Brasilia"],
-            ["Argentina","Buenos Aires"],["Italia","Roma"],["Grecia","Atenas"],["México","Ciudad de México"],["Rusia","Moscú"],
-            ["India","Nueva Delhi"],["Sudáfrica","Pretoria"],["Suecia","Estocolmo"],["Noruega","Oslo"],["Turquía","Ankara"],
-            ["China","Pekín"],["Perú","Lima"],["Colombia","Bogotá"],["Portugal","Lisboa"],["Finlandia","Helsinki"]
-        ],
-        features: [
-            ["Everest","Nepal"],["Amazonas","Sudamérica"],["Sahara","África"],["Andes","Sudamérica"],["Monte Kilimanjaro","Tanzania"],
-            ["Lago Baikal","Rusia"],["Río Nilo","África"],["Río Amazonas","Sudamérica"],["Groenlandia","Groenlandia"],["Islas Canarias","España"]
-        ]
-    };
-
-    const entData = {
-        movies: [["Pulp Fiction","Quentin Tarantino"],["Titanic","James Cameron"],["Avatar","James Cameron"],["Parásitos","Bong Joon-ho"],["El laberinto del fauno","Guillermo del Toro"]],
-        music: [["Bohemian Rhapsody","Queen"],["Shape of You","Ed Sheeran"],["Despacito","Luis Fonsi"],["Rolling in the Deep","Adele"],["Bad Guy","Billie Eilish"]]
-    };
-
-    const histData = {
-        years: [["Descubrimiento de América","1492"],["Revolución Francesa","1789"],["Primera Guerra Mundial","1914"],["Segunda Guerra Mundial","1939"],["Caída del Muro de Berlín","1989"]],
-        figures: [["George Washington","Primer presidente de EE.UU."],["Napoleón Bonaparte","Emperador francés"],["Mahatma Gandhi","Líder independencia India"],["Nelson Mandela","Líder sudafricano anti-apartheid"],["Juana de Arco","Heroína francesa"]]
-    };
-
-    const arteData = {
-        painters: [["Leonardo da Vinci","La Última Cena"],["Pablo Picasso","Guernica"],["Vincent van Gogh","La Noche Estrellada"],["Frida Kahlo","Autorretrato"],["Salvador Dalí","La persistencia de la memoria"]],
-        books: [["Don Quijote","Miguel de Cervantes"],["Cien años de soledad","Gabriel García Márquez"],["Hamlet","William Shakespeare"],["El Principito","Antoine de Saint-Exupéry"],["1984","George Orwell"]]
-    };
-
-    const cienciaData = {
-        planets: [["Mercurio","el planeta más cercano al Sol"],["Venus","lucero del alba"],["Marte","planeta rojo"],["Júpiter","gigante gaseoso"],["Saturno","anillos visibles"]],
-        basics: [["Agua","H2O"],["Oro","Au"],["Hierro","Fe"],["Oxígeno","O2"],["Célula","unidad básica de la vida"]]
-    };
-
-    const deportesData = {
-        facts: [["Fútbol","11 jugadores por equipo"],["Baloncesto NBA","48 minutos"],["Maratón","42,195 km"],["Golf","18 hoyos"],["Béisbol","Campo llamado diamante"]]
-    };
-
-    // Generadores por categoría
-    const gen = {
-        'Geografía': () => {
-            const questions = [];
-            // capitales
-            geoData.capitals.forEach(pair => {
-                const [country, capital] = pair;
-                const q = `¿Cuál es la capital de ${country}?`;
-                if (questions.length >= n) return;
-                if (!exists('Geografía', q)) {
-                    // crear opciones: correcta + otras aleatorias
-                    const opts = [capital];
-                    // escoger 3 capitales distintas
-                    const others = geoData.capitals.filter(p => p[1] !== capital).map(p => p[1]);
-                    shuffleArray(others);
-                    opts.push(others[0], others[1], others[2]);
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            // features preguntas hasta completar
-            geoData.features.forEach(pair => {
-                if (questions.length >= n) return;
-                const [feat, loc] = pair;
-                const q = `¿En qué país o región se encuentra ${feat}?`;
-                if (!exists('Geografía', q)) {
-                    const opts = [loc, 'España', 'Francia', 'Italia'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            return questions.slice(0, n);
-        },
-        'Entretenimiento': () => {
-            const questions = [];
-            entData.movies.forEach(p => {
-                if (questions.length >= n) return;
-                const [movie, director] = p;
-                const q = `¿Quién dirigió la película '${movie}'?`;
-                if (!exists('Entretenimiento', q)) {
-                    const opts = [director, 'Steven Spielberg', 'Christopher Nolan', 'Martin Scorsese'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            entData.music.forEach(p => {
-                if (questions.length >= n) return;
-                const [song, artist] = p;
-                const q = `¿Quién canta la canción '${song}'?`;
-                if (!exists('Entretenimiento', q)) {
-                    const opts = [artist, 'Rihanna', 'Madonna', 'Bruno Mars'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            return questions.slice(0, n);
-        },
-        'Historia': () => {
-            const questions = [];
-            histData.years.forEach(p => {
-                if (questions.length >= n) return;
-                const [event, year] = p;
-                const q = `¿En qué año ocurrió ${event}?`;
-                if (!exists('Historia', q)) {
-                    const opts = [year, '1800', '1900', '2000'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            histData.figures.forEach(p => {
-                if (questions.length >= n) return;
-                const [name, desc] = p;
-                const q = `¿Quién fue ${desc}?`;
-                if (!exists('Historia', q)) {
-                    const opts = [name, 'Personaje A', 'Personaje B', 'Personaje C'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            return questions.slice(0, n);
-        },
-        'Arte': () => {
-            const questions = [];
-            arteData.painters.forEach(p => {
-                if (questions.length >= n) return;
-                const [artist, work] = p;
-                const q = `¿Quién pintó '${work}'?`;
-                if (!exists('Arte', q)) {
-                    const opts = [artist, 'Picasso', 'Van Gogh', 'Dalí'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            arteData.books.forEach(p => {
-                if (questions.length >= n) return;
-                const [book, author] = p;
-                const q = `¿Quién escribió '${book}'?`;
-                if (!exists('Arte', q)) {
-                    const opts = [author, 'Autor A', 'Autor B', 'Autor C'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            return questions.slice(0, n);
-        },
-        'Ciencia': () => {
-            const questions = [];
-            cienciaData.planets.forEach(p => {
-                if (questions.length >= n) return;
-                const [planet, hint] = p;
-                const q = `¿Qué característica se asocia con ${planet}?`;
-                if (!exists('Ciencia', q)) {
-                    const opts = [hint, 'Es gaseoso', 'Tiene anillos', 'Es el más grande'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            cienciaData.basics.forEach(p => {
-                if (questions.length >= n) return;
-                const [term, fact] = p;
-                const q = `¿Cuál es ${term}?`;
-                if (!exists('Ciencia', q)) {
-                    const opts = [fact, 'Opción A', 'Opción B', 'Opción C'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            return questions.slice(0, n);
-        },
-        'Deportes': () => {
-            const questions = [];
-            deportesData.facts.forEach(p => {
-                if (questions.length >= n) return;
-                const [topic, fact] = p;
-                const q = `¿Qué dato es correcto sobre ${topic}?`;
-                if (!exists('Deportes', q)) {
-                    const opts = [fact, 'Dato A', 'Dato B', 'Dato C'];
-                    questions.push({q, o: opts, a: 0});
-                }
-            });
-            return questions.slice(0, n);
-        }
-    };
-
     // Helper: shuffle
     function shuffleArray(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } }
 
     // Generar y añadir sin duplicados
+    // Mantener un contador por categoría para numerar placeholders de forma única
+    const generatedCounters = {};
+    categories.forEach(cat => { generatedCounters[cat] = bancoPreguntas[cat].length; });
+
     categories.forEach(cat => {
-        const generated = (gen[cat] && gen[cat]()) || [];
+        // gen puede no existir (se usó antes para ayudas de generación). Protegemos la llamada.
+        let generated = [];
+        try {
+            if (typeof gen !== 'undefined' && gen && typeof gen[cat] === 'function') {
+                const maybe = gen[cat]();
+                if (Array.isArray(maybe)) generated = maybe;
+            }
+        } catch (e) {
+            console.warn('Error generando preguntas para', cat, e);
+            generated = [];
+        }
         let added = 0;
         for (const q of generated) {
             if (added >= n) break;
@@ -709,11 +553,41 @@ function generarPreguntasRealesPorCategoria(n = 20) {
                 added++;
             }
         }
-        // Si no se generaron suficientes (por falta de datos de apoyo), completar con placeholders controlados
-        for (let i = added; i < n; i++) {
-            const text = `Pregunta generada ${i+1} (${cat})`;
-            if (!exists(cat, text)) {
-                bancoPreguntas[cat].push({ q: text, o: ["Opción A", "Opción B", "Opción C", "Opción D"], a: 0 });
+        // Si no se generaron suficientes (por falta de datos de apoyo), completar con variantes plausibles
+        // En vez de placeholders genéricos, clonamos/mezclamos preguntas reales de la misma categoría
+        // para crear variantes con opciones válidas y respuesta correcta ajustada.
+        const pool = bancoPreguntas[cat].slice(0); // copia actual del banco
+        // Si no hay suficientes preguntas reales para clonar, todavía generamos textos únicos pero más descriptivos
+        for (let i = 0; i < (n - added); i++) {
+            generatedCounters[cat] += 1;
+            const num = generatedCounters[cat];
+            // Intentar clonar una pregunta existente y shufflear opciones
+            if (pool.length > 0) {
+                // Tomar una base al azar
+                const base = pool[Math.floor(Math.random() * pool.length)];
+                // Clonar pregunta
+                const newQ = { q: `${base.q} (variante ${num})`, o: base.o.slice(0), a: base.a };
+                // Mezclar opciones y ajustar índice de la respuesta correcta
+                const opts = newQ.o.map((v, idx) => ({ v, idx }));
+                shuffleArray(opts);
+                newQ.o = opts.map(x => x.v);
+                const newIndex = opts.findIndex(x => x.idx === base.a);
+                newQ.a = newIndex >= 0 ? newIndex : 0;
+
+                // Asegurar texto único
+                let text = newQ.q;
+                let safeNum = num;
+                while (exists(cat, text)) {
+                    safeNum++;
+                    text = `${base.q} (variante ${safeNum})`;
+                }
+                generatedCounters[cat] = safeNum;
+                newQ.q = text;
+                bancoPreguntas[cat].push(newQ);
+            } else {
+                // Caso extremo: no hay preguntas en la categoría (muy improbable). Crear placeholder más descriptivo.
+                const text = `Pregunta generada ${num} (${cat}) - (detalle pendiente)`;
+                bancoPreguntas[cat].push({ q: text, o: ["Respuesta 1", "Respuesta 2", "Respuesta 3", "Respuesta 4"], a: 0 });
             }
         }
     });
@@ -722,62 +596,84 @@ function generarPreguntasRealesPorCategoria(n = 20) {
 // Generar 20 preguntas reales por categoría y añadirlas al banco (si ya existen, no se duplican)
 generarPreguntasRealesPorCategoria(20);
 
-// ----------------- Firebase (config pegada por el usuario) -----------------
+// ----------------- Firebase (modular SDK) -----------------
+// Importar la SDK modular desde CDN (versión 12.x)
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
 // Esta es tu firebaseConfig (proporcionada). Si la quieres cambiar, reemplaza
 // estos valores por los de tu proyecto en Firebase Console.
 const firebaseConfig = {
-    apiKey: "AIzaSyATXkkdSSLNe4QIS0eHgoe6V_yFSpHpUAs",
-    authDomain: "trivial-4081f.firebaseapp.com",
-    projectId: "trivial-4081f",
-    storageBucket: "trivial-4081f.firebasestorage.app",
-    messagingSenderId: "289395488008",
-    appId: "1:289395488008:web:b0de4cfb3e7169fe1ea8bd",
-    measurementId: "G-93HCZRBJ9D"
+    apiKey: "AIzaSyA08fD15OeN8AD7Pjm9syYQQM97i89nu6s",
+    authDomain: "trivial-99d56.firebaseapp.com",
+    projectId: "trivial-99d56",
+    storageBucket: "trivial-99d56.firebasestorage.app",
+    messagingSenderId: "544275627332",
+    appId: "1:544275627332:web:5ddf76b59390c2d9e36b11",
+    measurementId: "G-7D7FWJFFQK"
 };
 
 let firebaseApp, auth, db;
 try {
-    if (window.firebase) {
-        firebaseApp = firebase.initializeApp(firebaseConfig);
-        auth = firebase.auth();
-        db = firebase.firestore();
-    }
+    firebaseApp = initializeApp(firebaseConfig);
+    auth = getAuth(firebaseApp);
+    db = getFirestore(firebaseApp);
 } catch (e) {
     console.warn('Firebase no inicializado - añade tu firebaseConfig si quieres usar auth/Firestore', e);
 }
 
 function signInWithGoogle() {
     if (!auth) return alert('Firebase no está configurado.');
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert('Error signin: ' + err.message));
+
+    // Verificar protocolo (no soporta file://)
+    const proto = (typeof location !== 'undefined' && location.protocol) ? location.protocol : null;
+    if (!proto || (proto !== 'http:' && proto !== 'https:' && proto !== 'chrome-extension:')) {
+        return alert('Tu aplicación debe servirse por http(s). No uses file://.\n\nSolución rápida: en la carpeta del proyecto ejecuta:\npython3 -m http.server 8000\nY abre: http://localhost:8000/index.html');
+    }
+
+    // Verificar que localStorage/Session storage funcionan
+    try {
+        const testKey = '__storage_test__';
+        localStorage.setItem(testKey, '1');
+        localStorage.removeItem(testKey);
+    } catch (e) {
+        return alert('El almacenamiento web (localStorage/cookies) está deshabilitado. Actívalo en la configuración del navegador para usar Google Sign-In.');
+    }
+
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider).catch(err => {
+        console.error('Signin error', err);
+        alert('Error signin: ' + err.message + '\nSi estás en localhost, asegúrate de usar http:// y de que "localhost" esté en los dominios autorizados en Firebase Console.');
+    });
 }
 
 function signOut() {
     if (!auth) return;
-    auth.signOut();
+    firebaseSignOut(auth).catch(e => console.warn('Error signOut', e));
 }
 
 // Observador de estado de autenticación
-if (typeof auth !== 'undefined') {
-    auth.onAuthStateChanged(u => {
+if (auth) {
+    onAuthStateChanged(auth, u => {
         const status = document.getElementById('auth-status');
         const signinBtn = document.getElementById('google-signin');
         const signoutBtn = document.getElementById('signout-btn');
         const historyBtn = document.getElementById('view-history');
         if (u) {
             user = u.displayName || u.email || 'Usuario';
-            status.innerText = `Autenticado: ${user}`;
-            signinBtn.classList.add('hidden');
-            signoutBtn.classList.remove('hidden');
+            if (status) status.innerText = `Autenticado: ${user}`;
+            if (signinBtn) signinBtn.classList.add('hidden');
+            if (signoutBtn) signoutBtn.classList.remove('hidden');
             if (historyBtn) historyBtn.classList.remove('hidden');
-            document.getElementById('user-display').innerText = user;
+            const ud = document.getElementById('user-display'); if (ud) ud.innerText = user;
         } else {
             user = '';
-            status.innerText = 'No autenticado';
-            signinBtn.classList.remove('hidden');
-            signoutBtn.classList.add('hidden');
+            if (status) status.innerText = 'No autenticado';
+            if (signinBtn) signinBtn.classList.remove('hidden');
+            if (signoutBtn) signoutBtn.classList.add('hidden');
             if (historyBtn) historyBtn.classList.add('hidden');
-            document.getElementById('user-display').innerText = '';
+            const ud = document.getElementById('user-display'); if (ud) ud.innerText = '';
         }
     });
 }
@@ -788,13 +684,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const outBtn = document.getElementById('signout-btn');
     if (gbtn) gbtn.onclick = signInWithGoogle;
     if (outBtn) outBtn.onclick = signOut;
+    // Inicializar canvas y botón de giro
+    canvas = document.getElementById('canvas');
+    if (canvas) {
+        try { ctx = canvas.getContext('2d'); } catch (e) { ctx = null; }
+    }
+    spinBtn = document.getElementById('spin-btn');
+    if (spinBtn) spinBtn.onclick = spinOnce;
+    // Dibujar ruleta inicial (si el canvas está disponible)
+    drawRoulette();
 });
 // -----------------------------------------------------------
 
-function empezarJuego() {
+async function empezarJuego() {
     const inputName = document.getElementById("username-input").value;
     if (!inputName) return alert("Bro, pon un seudónimo.");
-    if (auth && !auth.currentUser) return alert('Debes iniciar sesión con Google antes de empezar.');
+    if (auth && !auth.currentUser) {
+        // Intentar autenticación anónima para poder guardar resultados sin registro
+        if (auth && auth.signInAnonymously) {
+            try {
+                await auth.signInAnonymously();
+                console.log('Sesión anónima iniciada');
+            } catch (err) {
+                console.warn('No se pudo iniciar sesión anónima:', err);
+                alert('No has iniciado sesión. Podrás jugar pero los resultados no se guardarán en la nube.');
+            }
+        } else {
+            alert('No has iniciado sesión. Podrás jugar pero los resultados no se guardarán en la nube.');
+        }
+    }
     // preferir el displayName del auth si existe
     user = (auth && auth.currentUser && auth.currentUser.displayName) ? auth.currentUser.displayName : inputName;
     document.getElementById("setup-screen").classList.add("hidden");
@@ -804,6 +722,7 @@ function empezarJuego() {
 }
 
 function drawRoulette() {
+    if (!ctx || !canvas) return; // si no hay canvas no dibujamos
     categories.forEach((name, i) => {
         const angle = startAngle + i * arc;
         ctx.fillStyle = colors[i];
@@ -820,12 +739,12 @@ function drawRoulette() {
         ctx.restore();
     });
 }
-
-document.getElementById("spin-btn").onclick = function() {
+function spinOnce() {
     if (count >= TOTAL_PREGUNTAS) return;
-    this.disabled = true;
-    document.getElementById("quiz-area").classList.add("hidden");
-    
+    if (spinBtn) spinBtn.disabled = true;
+    const quizArea = document.getElementById("quiz-area");
+    if (quizArea) quizArea.classList.add("hidden");
+
     let spinAngleStart = Math.random() * 10 + 10;
     let spinTimeTotal = Math.random() * 2000 + 3000;
     let spinTime = 0;
@@ -843,7 +762,7 @@ document.getElementById("spin-btn").onclick = function() {
         setTimeout(rotate, 30);
     }
     rotate();
-};
+}
 
 function mostrarPregunta(tema) {
     // Seleccionar una pregunta que no haya salido a nivel global
@@ -900,6 +819,9 @@ function mostrarPregunta(tema) {
     document.getElementById("categoria-display").style.color = colors[categories.indexOf(tema)];
     document.getElementById("pregunta-text").innerText = item.q;
     
+    const feedbackEl = document.getElementById('feedback');
+    if (feedbackEl) { feedbackEl.innerText = ''; feedbackEl.className = 'feedback'; }
+
     const container = document.getElementById("opciones-container");
     container.innerHTML = "";
 
@@ -921,6 +843,7 @@ function mostrarPregunta(tema) {
                 stats[tema].correct++;
                 btn.style.borderColor = "#2ecc71";
                 btn.style.color = "#2ecc71";
+                if (feedbackEl) { feedbackEl.className = 'feedback success'; feedbackEl.innerText = '¡Correcto!'; }
             } else {
                 btn.style.borderColor = "#e74c3c";
                 btn.style.color = "#e74c3c";
@@ -930,6 +853,7 @@ function mostrarPregunta(tema) {
                     correctBtn.style.borderColor = "#2ecc71";
                     correctBtn.style.color = "#2ecc71";
                 }
+                if (feedbackEl) { feedbackEl.className = 'feedback error'; feedbackEl.innerText = 'Incorrecto — respuesta correcta: ' + item.o[item.a]; }
             }
             
             document.getElementById("current-count").innerText = count;
@@ -948,7 +872,7 @@ function mostrarPregunta(tema) {
     });
 }
 
-function mostrarResultados() {
+async function mostrarResultados() {
     // ocultar zona juego
     document.getElementById("quiz-area").classList.add("hidden");
     document.getElementById("results-screen").classList.remove("hidden");
@@ -982,21 +906,58 @@ function mostrarResultados() {
         perTopic.appendChild(div);
     });
 
-    // Guardar resultados en Firestore si está configurado
-    if (db && auth && auth.currentUser) {
-        const uid = auth.currentUser.uid;
-        const payload = {
-            userDisplay: user,
-            uid,
-            score,
-            total: TOTAL_PREGUNTAS,
-            percent: percentTotal,
-            byTopic: stats,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        };
-        db.collection('results').add(payload).then(() => {
-            console.log('Resultados guardados en Firestore');
-        }).catch(e => console.warn('Error guardando en Firestore', e));
+    // Intentar guardar en Firestore si está configurado; si no es posible, guardar en localStorage
+    if (db) {
+        // Asegurarnos de tener usuario en auth (intentar anon sign-in si hace falta)
+        try {
+            if (auth && !auth.currentUser && auth.signInAnonymously) {
+                try {
+                    await auth.signInAnonymously();
+                    console.log('Sesión anónima iniciada antes de guardar resultados');
+                } catch (e) {
+                    console.warn('No se pudo iniciar sesión anónima antes de guardar:', e);
+                }
+            }
+
+            const uid = (auth && auth.currentUser) ? auth.currentUser.uid : (localStorage.getItem('trivial_local_uid') || null);
+            // si no hay uid, crear un local uid para identificar dispositivos
+            let localUid = localStorage.getItem('trivial_local_uid');
+            if (!uid && !localUid) {
+                localUid = 'local-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
+                localStorage.setItem('trivial_local_uid', localUid);
+            }
+
+            const payload = {
+                userDisplay: user || 'Anónimo',
+                uid: uid || localUid,
+                score,
+                total: TOTAL_PREGUNTAS,
+                percent: percentTotal,
+                byTopic: stats,
+                timestamp: serverTimestamp()
+            };
+
+            // Intentar guardar en Firestore (modular)
+            try {
+                await addDoc(collection(db, 'results'), payload);
+                console.log('Resultados guardados en Firestore');
+            } catch (e) {
+                console.warn('Error guardando en Firestore, salvando localmente:', e);
+                // fallback local
+                const local = JSON.parse(localStorage.getItem('trivial_results') || '[]');
+                local.unshift({ ...payload, timestamp: new Date().toISOString() });
+                localStorage.setItem('trivial_results', JSON.stringify(local.slice(0, 200)));
+                console.log('Resultados guardados en localStorage');
+            }
+        } catch (e) {
+            console.warn('Error en proceso de guardado:', e);
+        }
+    } else {
+        // Guardar en localStorage si no hay db
+        const local = JSON.parse(localStorage.getItem('trivial_results') || '[]');
+        local.unshift({ userDisplay: user || 'Anónimo', score, total: TOTAL_PREGUNTAS, percent: percentTotal, byTopic: stats, timestamp: new Date().toISOString() });
+        localStorage.setItem('trivial_results', JSON.stringify(local.slice(0, 200)));
+        console.log('Resultados guardados en localStorage (no hay Firestore configurado)');
     }
 }
 
@@ -1011,17 +972,16 @@ function mostrarHistorial() {
         list.innerHTML = 'Cargando...';
 
         // Consultar resultados por uid
-            db.collection('results').where('uid', '==', uid).orderBy('timestamp', 'desc').limit(50).get()
-                .then(snapshot => {
-                    if (snapshot.empty) {
-                            list.innerHTML = '<p>No hay partidas guardadas.</p>';
-                            return;
-                    }
+            (async () => {
+                try {
+                    const q = query(collection(db, 'results'), where('uid', '==', uid), orderBy('timestamp', 'desc'), limit(50));
+                    const snap = await getDocs(q);
+                    if (snap.empty) { list.innerHTML = '<p>No hay partidas guardadas.</p>'; return; }
                     const items = [];
-                    snapshot.forEach(doc => {
-                            const d = doc.data();
-                            const dateObj = d.timestamp && d.timestamp.toDate ? d.timestamp.toDate() : null;
-                            const date = dateObj ? dateObj.toLocaleString() : 'Sin fecha';
+                    snap.forEach(doc => {
+                        const d = doc.data();
+                        const dateObj = d.timestamp && d.timestamp.toDate ? d.timestamp.toDate() : (d.timestamp ? new Date(d.timestamp) : null);
+                        const date = dateObj ? dateObj.toLocaleString() : 'Sin fecha';
 
                             // Construir sección por tema si existe byTopic
                             let topicsHtml = '';
@@ -1048,11 +1008,11 @@ function mostrarHistorial() {
                             </div>`);
                     });
                     list.innerHTML = items.join('');
-                })
-                .catch(e => {
+                } catch (e) {
                     console.warn('Error cargando historial', e);
                     list.innerHTML = '<p>Error cargando historial.</p>';
-                });
+                }
+            })();
 }
 
 function cerrarHistorial() {
@@ -1075,4 +1035,65 @@ function reiniciarJuego() {
     document.getElementById('spin-btn').disabled = false;
 }
 
-drawRoulette();
+// Mostrar ranking: mejores porcentajes por usuario (consulta Firestore)
+function mostrarRanking() {
+    const rankList = document.getElementById('ranking-list');
+    if (!rankList) return alert('No hay elemento de ranking en la página.');
+    rankList.innerHTML = 'Cargando...';
+    document.getElementById('setup-screen').classList.add('hidden');
+    document.getElementById('game-screen').classList.remove('hidden');
+    document.getElementById('ranking-screen').classList.remove('hidden');
+
+    if (!db) {
+        rankList.innerHTML = '<p>Firestore no está configurado. No se puede mostrar el ranking.</p>';
+        return;
+    }
+
+    // Consultar los últimos 500 resultados y agrupar por uid (procesado en cliente)
+    (async () => {
+        try {
+            const q = query(collection(db, 'results'), orderBy('percent', 'desc'), limit(500));
+            const snap = await getDocs(q);
+            if (snap.empty) { rankList.innerHTML = '<p>No hay partidas guardadas.</p>'; return; }
+            // Map uid -> best record
+            const bestByUid = new Map();
+            snap.forEach(doc => {
+                const d = doc.data();
+                if (!d.uid) return;
+                const existing = bestByUid.get(d.uid);
+                if (!existing || (d.percent || 0) > (existing.percent || 0)) {
+                    bestByUid.set(d.uid, { name: d.userDisplay || 'Anónimo', percent: d.percent || 0, score: d.score || 0, total: d.total || TOTAL_PREGUNTAS, date: d.timestamp && d.timestamp.toDate ? d.timestamp.toDate() : (d.timestamp ? new Date(d.timestamp) : null) });
+                }
+            });
+
+            // Ordenar por percent desc
+            const arr = Array.from(bestByUid.entries()).map(([uid, info]) => ({ uid, ...info }));
+            arr.sort((a,b) => b.percent - a.percent);
+
+            // Construir HTML
+            if (arr.length === 0) {
+                rankList.innerHTML = '<p>No hay datos de ranking.</p>';
+                return;
+            }
+            const items = arr.slice(0, 50).map((r, idx) => {
+                const dateStr = r.date ? r.date.toLocaleString() : '—';
+                return `<div class="ranking-item"><div class="rank-pos">#${idx+1}</div><div class="rank-name">${escapeHtml(r.name)}<div style="font-size:0.9rem;color:#bcd">${dateStr}</div></div><div class="rank-score">${r.percent}%</div></div>`;
+            });
+            rankList.innerHTML = items.join('');
+        } catch (e) {
+            console.warn('Error cargando ranking', e);
+            rankList.innerHTML = '<p>Error cargando ranking.</p>';
+        }
+    })();
+}
+
+function cerrarRanking() {
+    document.getElementById('ranking-screen').classList.add('hidden');
+    document.getElementById('setup-screen').classList.remove('hidden');
+}
+
+// pequeña función de escape para seguridad XSS mínima
+function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c]));
+}

@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <title>Trivial Challenge - Modo Desafío</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Firebase SDKs (se inicializan en script.js) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+    <!-- Usamos la SDK modular importada desde script.js (script.js es type=module) -->
 </head>
 <body>
     <div id="setup-screen">
@@ -21,6 +18,7 @@
         <div style="margin-top:10px;">
             <button onclick="empezarJuego()">EMPEZAR DESAFÍO</button>
             <button onclick="mostrarHistorial()" id="view-history" class="btn-main">Ver historial</button>
+            <button onclick="mostrarRanking()" id="view-ranking" class="btn-main">Ver ranking</button>
         </div>
     </div>
 
@@ -42,6 +40,7 @@
                 <h2 id="categoria-display"></h2>
                 <p id="pregunta-text"></p>
                 <div id="opciones-container"></div>
+                <div id="feedback" class="feedback"></div>
             </div>
         </div>
 
@@ -61,8 +60,16 @@
                 <button onclick="cerrarHistorial()" class="btn-main">Cerrar historial</button>
             </div>
         </div>
+
+        <div id="ranking-screen" class="hidden">
+            <div class="quiz-card">
+                <h2>Ranking - Mejores jugadores</h2>
+                <div id="ranking-list">Cargando...</div>
+                <button onclick="cerrarRanking()" class="btn-main">Cerrar ranking</button>
+            </div>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
