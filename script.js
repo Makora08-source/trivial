@@ -599,7 +599,7 @@ generarPreguntasRealesPorCategoria(20);
 // ----------------- Firebase (modular SDK) -----------------
 // Importar la SDK modular desde CDN (versión 12.x)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
 // Esta es tu firebaseConfig (proporcionada). Si la quieres cambiar, reemplaza
@@ -648,6 +648,31 @@ function signInWithGoogle() {
     });
 }
 
+async function signUpWithEmail() {
+    if (!auth) return alert('Firebase no está configurado.');
+    const email = document.getElementById('email-input').value.trim();
+    const password = document.getElementById('password-input').value;
+    if (!email || !password) return alert('Introduce email y contraseña.');
+    try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert('Registro exitoso. Ahora estás autenticado.');
+    } catch (err) {
+        alert('Error en registro: ' + err.message);
+    }
+}
+
+async function signInWithEmail() {
+    if (!auth) return alert('Firebase no está configurado.');
+    const email = document.getElementById('email-input').value.trim();
+    const password = document.getElementById('password-input').value;
+    if (!email || !password) return alert('Introduce email y contraseña.');
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (err) {
+        alert('Error en inicio de sesión: ' + err.message);
+    }
+}
+
 function signOut() {
     if (!auth) return;
     firebaseSignOut(auth).catch(e => console.warn('Error signOut', e));
@@ -682,7 +707,11 @@ if (auth) {
 document.addEventListener('DOMContentLoaded', () => {
     const gbtn = document.getElementById('google-signin');
     const outBtn = document.getElementById('signout-btn');
+    const signupBtn = document.getElementById('signup-btn');
+    const signinBtn = document.getElementById('signin-btn');
     if (gbtn) gbtn.onclick = signInWithGoogle;
+    if (signupBtn) signupBtn.onclick = signUpWithEmail;
+    if (signinBtn) signinBtn.onclick = signInWithEmail;
     if (outBtn) outBtn.onclick = signOut;
     // Inicializar canvas y botón de giro
     canvas = document.getElementById('canvas');
@@ -1077,7 +1106,7 @@ function mostrarRanking() {
             }
             const items = arr.slice(0, 50).map((r, idx) => {
                 const dateStr = r.date ? r.date.toLocaleString() : '—';
-                return `<div class="ranking-item"><div class="rank-pos">#${idx+1}</div><div class="rank-name">${escapeHtml(r.name)}<div style="font-size:0.9rem;color:#bcd">${dateStr}</div></div><div class="rank-score">${r.percent}%</div></div>`;
+                return `<div class="ranking-item"><div class="rank-pos">#${idx+1}</div><div class="rank-name">${escapeHtml(r.name)}<div style="font-size:0.9rem;color:#bcd">${dateStr}</div></div><div class="rank-score">${r.score}/${r.total} (${r.percent}%)</div></div>`;
             });
             rankList.innerHTML = items.join('');
         } catch (e) {
