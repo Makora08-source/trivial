@@ -11,18 +11,13 @@
         <h1>¡Bienvenido al Trivial!</h1>
         <div id="auth-area">
             <p id="auth-status">No autenticado</p>
-            <button id="google-signin" class="btn-main">Iniciar sesión con Google</button>
             <div id="email-auth" style="margin-top:10px;">
                 <input type="email" id="email-input" placeholder="Correo electrónico" style="width:200px; margin-right:5px;">
                 <input type="password" id="password-input" placeholder="Contraseña" style="width:200px; margin-right:5px;">
-                <button id="signin-btn" class="btn-main">Iniciar sesión</button>
             </div>
-            <button id="signout-btn" class="btn-main hidden">Cerrar sesión</button>
         </div>
         <div style="margin-top:10px;">
-            <button onclick="empezarJuego()">EMPEZAR DESAFÍO</button>
-            <button onclick="mostrarHistorial()" id="view-history" class="btn-main">Ver historial</button>
-            <button onclick="mostrarRanking()" id="view-ranking" class="btn-main">Ver ranking</button>
+            <button id="start-btn" onclick="empezarJuego()">EMPEZAR DESAFÍO</button>
         </div>
     </div>
 

@@ -599,7 +599,7 @@ generarPreguntasRealesPorCategoria(20);
 // ----------------- Firebase (modular SDK) -----------------
 // Importar la SDK modular desde CDN (versión 12.x)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+import { getAuth, signOut as firebaseSignOut, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
 // Esta es tu firebaseConfig (proporcionada). Si la quieres cambiar, reemplaza
@@ -623,30 +623,6 @@ try {
     console.warn('Firebase no inicializado - añade tu firebaseConfig si quieres usar auth/Firestore', e);
 }
 
-function signInWithGoogle() {
-    if (!auth) return alert('Firebase no está configurado.');
-
-    // Verificar protocolo (no soporta file://)
-    const proto = (typeof location !== 'undefined' && location.protocol) ? location.protocol : null;
-    if (!proto || (proto !== 'http:' && proto !== 'https:' && proto !== 'chrome-extension:')) {
-        return alert('Tu aplicación debe servirse por http(s). No uses file://.\n\nSolución rápida: en la carpeta del proyecto ejecuta:\npython3 -m http.server 8000\nY abre: http://localhost:8000/index.html');
-    }
-
-    // Verificar que localStorage/Session storage funcionan
-    try {
-        const testKey = '__storage_test__';
-        localStorage.setItem(testKey, '1');
-        localStorage.removeItem(testKey);
-    } catch (e) {
-        return alert('El almacenamiento web (localStorage/cookies) está deshabilitado. Actívalo en la configuración del navegador para usar Google Sign-In.');
-    }
-
-    const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider).catch(err => {
-        console.error('Signin error', err);
-        alert('Error signin: ' + err.message + '\nSi estás en localhost, asegúrate de usar http:// y de que "localhost" esté en los dominios autorizados en Firebase Console.');
-    });
-}
 
 async function signInWithEmail() {
     if (!auth) return alert('Firebase no está configurado.');
@@ -669,22 +645,13 @@ function signOut() {
 if (auth) {
     onAuthStateChanged(auth, u => {
         const status = document.getElementById('auth-status');
-        const signinBtn = document.getElementById('google-signin');
-        const signoutBtn = document.getElementById('signout-btn');
-        const historyBtn = document.getElementById('view-history');
         if (u) {
             user = u.displayName || u.email || 'Usuario';
             if (status) status.innerText = `Autenticado: ${user}`;
-            if (signinBtn) signinBtn.classList.add('hidden');
-            if (signoutBtn) signoutBtn.classList.remove('hidden');
-            if (historyBtn) historyBtn.classList.remove('hidden');
             const ud = document.getElementById('user-display'); if (ud) ud.innerText = user;
         } else {
             user = '';
             if (status) status.innerText = 'No autenticado';
-            if (signinBtn) signinBtn.classList.remove('hidden');
-            if (signoutBtn) signoutBtn.classList.add('hidden');
-            if (historyBtn) historyBtn.classList.add('hidden');
             const ud = document.getElementById('user-display'); if (ud) ud.innerText = '';
         }
     });
@@ -692,12 +659,8 @@ if (auth) {
 
 // Vincular botones
 document.addEventListener('DOMContentLoaded', () => {
-    const gbtn = document.getElementById('google-signin');
-    const outBtn = document.getElementById('signout-btn');
-    const signinBtn = document.getElementById('signin-btn');
-    if (gbtn) gbtn.onclick = signInWithGoogle;
-    if (signinBtn) signinBtn.onclick = signInWithEmail;
-    if (outBtn) outBtn.onclick = signOut;
+    const startBtn = document.getElementById('start-btn');
+    if (startBtn) startBtn.onclick = empezarJuego;
     // Inicializar canvas y botón de giro
     canvas = document.getElementById('canvas');
     if (canvas) {
@@ -711,15 +674,24 @@ document.addEventListener('DOMContentLoaded', () => {
 // -----------------------------------------------------------
 
 async function empezarJuego() {
-    if (!auth || !auth.currentUser) {
-        return alert("Necesitas iniciar sesión con tu email o Google para jugar.");
+    if (!auth) return alert('Firebase no está configurado.');
+    const email = document.getElementById('email-input').value.trim();
+    const password = document.getElementById('password-input').value;
+    if (!email || !password) return alert('Introduce email y contraseña para jugar.');
+
+    if (!auth.currentUser) {
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+        } catch (err) {
+            return alert('Error en inicio de sesión: ' + err.message);
+        }
     }
-    // Usar el displayName o email del usuario autenticado
-    const userDisplay = auth.currentUser.displayName || auth.currentUser.email || 'Usuario';
+
+    const userDisplay = auth.currentUser?.displayName || auth.currentUser?.email || 'Usuario';
     user = userDisplay;
-    document.getElementById("setup-screen").classList.add("hidden");
-    document.getElementById("game-screen").classList.remove("hidden");
-    document.getElementById("user-display").innerText = user;
+    document.getElementById('setup-screen').classList.add('hidden');
+    document.getElementById('game-screen').classList.remove('hidden');
+    document.getElementById('user-display').innerText = user;
     drawRoulette();
 }
 
@@ -910,20 +882,9 @@ async function mostrarResultados() {
 
     // Intentar guardar en Firestore si está configurado; si no es posible, guardar en localStorage
     if (db) {
-        // Asegurarnos de tener usuario en auth (intentar anon sign-in si hace falta)
-        try {
-            if (auth && !auth.currentUser && auth.signInAnonymously) {
-                try {
-                    await auth.signInAnonymously();
-                    console.log('Sesión anónima iniciada antes de guardar resultados');
-                } catch (e) {
-                    console.warn('No se pudo iniciar sesión anónima antes de guardar:', e);
-                }
-            }
-
-            const uid = (auth && auth.currentUser) ? auth.currentUser.uid : (localStorage.getItem('trivial_local_uid') || null);
-            // si no hay uid, crear un local uid para identificar dispositivos
-            let localUid = localStorage.getItem('trivial_local_uid');
+        const uid = (auth && auth.currentUser) ? auth.currentUser.uid : (localStorage.getItem('trivial_local_uid') || null);
+        // si no hay uid, crear un local uid para identificar dispositivos
+        let localUid = localStorage.getItem('trivial_local_uid');
             if (!uid && !localUid) {
                 localUid = 'local-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
                 localStorage.setItem('trivial_local_uid', localUid);
@@ -1031,7 +992,10 @@ function reiniciarJuego() {
     document.getElementById('results-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('setup-screen').classList.remove('hidden');
-    document.getElementById('username-input').value = '';
+    const emailInput = document.getElementById('email-input');
+    const passwordInput = document.getElementById('password-input');
+    if (emailInput) emailInput.value = '';
+    if (passwordInput) passwordInput.value = '';
     document.getElementById('current-count').innerText = '0';
     document.getElementById('score-display').innerText = '0';
     document.getElementById('spin-btn').disabled = false;
