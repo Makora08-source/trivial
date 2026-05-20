@@ -599,7 +599,7 @@ generarPreguntasRealesPorCategoria(20);
 // ----------------- Firebase (modular SDK) -----------------
 // Importar la SDK modular desde CDN (versión 12.x)
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-import { getAuth, signOut as firebaseSignOut, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, query, where, orderBy, limit, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
 // Esta es tu firebaseConfig (proporcionada). Si la quieres cambiar, reemplaza
@@ -624,21 +624,21 @@ try {
 }
 
 
-async function signInWithEmail() {
-    if (!auth) return alert('Firebase no está configurado.');
-    const email = document.getElementById('email-input').value.trim();
-    const password = document.getElementById('password-input').value;
-    if (!email || !password) return alert('Introduce email y contraseña.');
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) {
-        alert('Error en inicio de sesión: ' + err.message);
-    }
-}
-
 function signOut() {
     if (!auth) return;
     firebaseSignOut(auth).catch(e => console.warn('Error signOut', e));
+}
+
+async function loginWithGoogle() {
+    if (!auth) return alert('Firebase no está configurado.');
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (err) {
+        if (err.code !== 'auth/popup-closed-by-user') {
+            alert('Error en inicio de sesión con Google: ' + err.message);
+        }
+    }
 }
 
 // Observador de estado de autenticación
@@ -661,6 +661,8 @@ if (auth) {
 document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('start-btn');
     if (startBtn) startBtn.onclick = empezarJuego;
+    const googleBtn = document.getElementById('google-signin-btn');
+    if (googleBtn) googleBtn.onclick = loginWithGoogle;
     // Inicializar canvas y botón de giro
     canvas = document.getElementById('canvas');
     if (canvas) {
@@ -675,15 +677,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function empezarJuego() {
     if (!auth) return alert('Firebase no está configurado.');
-    const email = document.getElementById('email-input').value.trim();
-    const password = document.getElementById('password-input').value;
-    if (!email || !password) return alert('Introduce email y contraseña para jugar.');
-
     if (!auth.currentUser) {
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const provider = new GoogleAuthProvider();
+            await signInWithPopup(auth, provider);
         } catch (err) {
-            return alert('Error en inicio de sesión: ' + err.message);
+            return alert('Error en inicio de sesión con Google: ' + err.message);
         }
     }
 
@@ -992,10 +991,6 @@ function reiniciarJuego() {
     document.getElementById('results-screen').classList.add('hidden');
     document.getElementById('game-screen').classList.add('hidden');
     document.getElementById('setup-screen').classList.remove('hidden');
-    const emailInput = document.getElementById('email-input');
-    const passwordInput = document.getElementById('password-input');
-    if (emailInput) emailInput.value = '';
-    if (passwordInput) passwordInput.value = '';
     document.getElementById('current-count').innerText = '0';
     document.getElementById('score-display').innerText = '0';
     document.getElementById('spin-btn').disabled = false;
