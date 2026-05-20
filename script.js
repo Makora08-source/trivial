@@ -911,9 +911,6 @@ async function mostrarResultados() {
                 localStorage.setItem('trivial_results', JSON.stringify(local.slice(0, 200)));
                 console.log('Resultados guardados en localStorage');
             }
-        } catch (e) {
-            console.warn('Error en proceso de guardado:', e);
-        }
     } else {
         // Guardar en localStorage si no hay db
         const local = JSON.parse(localStorage.getItem('trivial_results') || '[]');
