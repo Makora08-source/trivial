@@ -661,6 +661,8 @@ if (auth) {
 document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('start-btn');
     if (startBtn) startBtn.onclick = empezarJuego;
+    const rankingBtn = document.getElementById('show-ranking-btn');
+    if (rankingBtn) rankingBtn.onclick = mostrarRanking;
     const googleBtn = document.getElementById('google-signin-btn');
     if (googleBtn) googleBtn.onclick = loginWithGoogle;
     // Inicializar canvas y botón de giro
@@ -1002,8 +1004,27 @@ function mostrarRanking() {
     document.getElementById('game-screen').classList.remove('hidden');
     document.getElementById('ranking-screen').classList.remove('hidden');
 
+    const localResults = JSON.parse(localStorage.getItem('trivial_results') || '[]');
     if (!db) {
-        rankList.innerHTML = '<p>Firestore no está configurado. No se puede mostrar el ranking.</p>';
+        if (!localResults.length) {
+            rankList.innerHTML = '<p>No hay resultados guardados en este dispositivo.</p>';
+            return;
+        }
+        const bestByUid = new Map();
+        localResults.forEach(d => {
+            const uid = d.uid || d.userDisplay || ('local-' + (d.userDisplay || 'anónimo'));
+            const existing = bestByUid.get(uid);
+            if (!existing || (d.percent || 0) > (existing.percent || 0)) {
+                bestByUid.set(uid, { name: d.userDisplay || 'Anónimo', percent: d.percent || 0, score: d.score || 0, total: d.total || TOTAL_PREGUNTAS, date: d.timestamp ? new Date(d.timestamp) : null });
+            }
+        });
+        const arr = Array.from(bestByUid.values());
+        arr.sort((a, b) => b.percent - a.percent);
+        const items = arr.slice(0, 50).map((r, idx) => {
+            const dateStr = r.date ? r.date.toLocaleString() : '—';
+            return `<div class="ranking-item"><div class="rank-pos">#${idx+1}</div><div class="rank-name">${escapeHtml(r.name)}<div style="font-size:0.9rem;color:#bcd">${dateStr}</div></div><div class="rank-score">${r.score}/${r.total} (${r.percent}%)</div></div>`;
+        });
+        rankList.innerHTML = `<p style="margin-bottom:12px; color:#bcd;">Ranking local (mejor resultado por usuario en este dispositivo)</p>${items.join('')}`;
         return;
     }
 
